@@ -6,10 +6,8 @@ namespace PmcDashboard.Api.Repositories;
 
 public sealed class SqlDashboardRepository(IConfiguration configuration) : IDashboardRepository
 {
-    private const string ProcedureName = "dbo.up_sxxx_erl_consulta_despachosPorAno_api";
-    private readonly string _connectionString =
-        configuration.GetConnectionString("DashboardDatabase")
-        ?? throw new InvalidOperationException("Missing ConnectionStrings:DashboardDatabase.");
+    private readonly string _connectionString = GetRequiredConnectionString(configuration);
+    private readonly string _procedureName = GetRequiredProcedureName(configuration);
 
     public async Task<IReadOnlyList<DespachoRawRow>> GetDespachosAsync(
         int ano,
@@ -17,7 +15,7 @@ public sealed class SqlDashboardRepository(IConfiguration configuration) : IDash
         CancellationToken cancellationToken)
     {
         await using var connection = new SqlConnection(_connectionString);
-        await using var command = new SqlCommand(ProcedureName, connection)
+        await using var command = new SqlCommand(_procedureName, connection)
         {
             CommandType = CommandType.StoredProcedure,
             CommandTimeout = 120
@@ -51,7 +49,7 @@ public sealed class SqlDashboardRepository(IConfiguration configuration) : IDash
             Sacos = reader.GetDecimalOrDefault("Sacos"),
             FormaEntrega = reader.GetStringOrEmpty("Forma Entrega"),
             TipoProducto = reader.GetStringOrEmpty("Tipo Producto"),
-            Ano = reader.GetIntOrDefault("Año"),
+            Ano = reader.GetIntOrDefault("A\u00f1o"),
             Mes = reader.GetStringOrEmpty("Mes"),
             Fecha = reader.GetDateTimeOrDefault("Fecha"),
             CodTurno = reader.GetStringOrEmpty("codTurno"),
@@ -75,5 +73,29 @@ public sealed class SqlDashboardRepository(IConfiguration configuration) : IDash
             TipoDespacho = reader.GetStringOrEmpty("tipoDespacho"),
             Correlativo = reader.GetIntOrDefault("Correlativo")
         };
+    }
+
+    private static string GetRequiredConnectionString(IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("DashboardDatabase");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "Missing ConnectionStrings:DashboardDatabase. Set it in .env using ConnectionStrings__DashboardDatabase.");
+        }
+
+        return connectionString;
+    }
+
+    private static string GetRequiredProcedureName(IConfiguration configuration)
+    {
+        var procedureName = configuration["StoredProcedures:DashboardDespachos"];
+        if (string.IsNullOrWhiteSpace(procedureName))
+        {
+            throw new InvalidOperationException(
+                "Missing StoredProcedures:DashboardDespachos. Set it in .env using StoredProcedures__DashboardDespachos.");
+        }
+
+        return procedureName;
     }
 }

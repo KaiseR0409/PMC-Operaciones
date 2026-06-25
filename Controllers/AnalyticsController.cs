@@ -8,22 +8,7 @@ namespace PmcDashboard.Api.Controllers;
 [Route("analytics")]
 public sealed class AnalyticsController(IAnalyticsService analyticsService) : ControllerBase
 {
-    [HttpGet("raw")]
-    public async Task<IActionResult> Raw(
-        [FromQuery] int year,
-        [FromQuery] int month,
-        CancellationToken cancellationToken)
-    {
-        var validationError = ValidatePeriod(year, month);
-        if (validationError is not null)
-        {
-            return BadRequest(validationError);
-        }
-
-        var rows = await analyticsService.GetRawAsync(year, month, cancellationToken);
-        return Ok(rows);
-    }
-
+    
     [HttpGet("clients")]
     public async Task<IActionResult> Clients(
         [FromQuery] int year,
