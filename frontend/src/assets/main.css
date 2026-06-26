@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* scrollbar moderna */
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #111827;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #7c3aed;
+  border-radius: 999px;
+}
+
+/* body */
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #030712;
+  color: white;
+  font-family: Arial, Helvetica, sans-serif;
+}
