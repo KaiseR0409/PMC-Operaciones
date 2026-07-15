@@ -91,27 +91,17 @@ watch(() => truckChartQuery.error.value, (err) => {
   if (err) trackError(truckChartQuery, "No se pudo actualizar el grafico de camiones.")
 })
 
-const tableQueryData = tableQuery.data
-const lineChartQueryData = lineChartQuery.data
-const truckChartQueryData = truckChartQuery.data
+watch(() => tableQuery.data.value, (val) => {
+  tableDataRef.value = val || []
+}, { immediate: true })
 
-if (tableQueryData) {
-  tableQueryData.watch((val) => {
-    tableDataRef.value = val || []
-  }, { immediate: true })
-}
+watch(() => lineChartQuery.data.value, (val) => {
+  lineChartDataRef.value = val || null
+}, { immediate: true })
 
-if (lineChartQueryData) {
-  lineChartQueryData.watch((val) => {
-    lineChartDataRef.value = val || null
-  }, { immediate: true })
-}
-
-if (truckChartQueryData) {
-  truckChartQueryData.watch((val) => {
-    truckChartDataRef.value = val || null
-  }, { immediate: true })
-}
+watch(() => truckChartQuery.data.value, (val) => {
+  truckChartDataRef.value = val || null
+}, { immediate: true })
 </script>
 
 <template>
