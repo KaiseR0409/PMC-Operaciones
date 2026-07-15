@@ -6,9 +6,17 @@ namespace PmcDashboard.Api.Controllers;
 
 [ApiController]
 [Route("analytics")]
-public sealed class AnalyticsController(IAnalyticsService analyticsService) : ControllerBase
+public sealed class AnalyticsController : ControllerBase
 {
-    
+    private readonly IAnalyticsService _analyticsService;
+    private readonly ILogger<AnalyticsController> _logger;
+
+    public AnalyticsController(IAnalyticsService analyticsService, ILogger<AnalyticsController> logger)
+    {
+        _analyticsService = analyticsService;
+        _logger = logger;
+    }
+
     [HttpGet("clients")]
     public async Task<IActionResult> Clients(
         [FromQuery] int year,
@@ -21,7 +29,8 @@ public sealed class AnalyticsController(IAnalyticsService analyticsService) : Co
             return BadRequest(validationError);
         }
 
-        var clients = await analyticsService.GetClientsAsync(year, month, cancellationToken);
+        _logger.LogInformation("Fetching clients for {Year}-{Month}", year, month);
+        var clients = await _analyticsService.GetClientsAsync(year, month, cancellationToken);
         return Ok(clients);
     }
 
@@ -38,7 +47,8 @@ public sealed class AnalyticsController(IAnalyticsService analyticsService) : Co
             return BadRequest(validationError);
         }
 
-        var summary = await analyticsService.GetSummaryAsync(year, month, client, cancellationToken);
+        _logger.LogInformation("Fetching summary for {Year}-{Month} (client: {Client})", year, month, client ?? "all");
+        var summary = await _analyticsService.GetSummaryAsync(year, month, client, cancellationToken);
         return Ok(summary);
     }
 
@@ -61,7 +71,8 @@ public sealed class AnalyticsController(IAnalyticsService analyticsService) : Co
             return BadRequest(new ApiErrorDto("client is required."));
         }
 
-        var rows = await analyticsService.GetClientTableAsync(year, month, client, turno, cancellationToken);
+        _logger.LogInformation("Fetching client table for {Year}-{Month} (client: {Client}, turno: {Turno})", year, month, client, turno ?? "all");
+        var rows = await _analyticsService.GetClientTableAsync(year, month, client, turno, cancellationToken);
         return Ok(rows);
     }
 
@@ -79,7 +90,8 @@ public sealed class AnalyticsController(IAnalyticsService analyticsService) : Co
             return BadRequest(validationError);
         }
 
-        var points = await analyticsService.GetLineChartAsync(year, month, client, product, cancellationToken);
+        _logger.LogInformation("Fetching line chart for {Year}-{Month} (client: {Client}, product: {Product})", year, month, client ?? "all", product ?? "all");
+        var points = await _analyticsService.GetLineChartAsync(year, month, client, product, cancellationToken);
         return Ok(points);
     }
 
@@ -96,7 +108,8 @@ public sealed class AnalyticsController(IAnalyticsService analyticsService) : Co
             return BadRequest(validationError);
         }
 
-        var points = await analyticsService.GetTruckChartAsync(year, month, client, cancellationToken);
+        _logger.LogInformation("Fetching truck chart for {Year}-{Month} (client: {Client})", year, month, client ?? "all");
+        var points = await _analyticsService.GetTruckChartAsync(year, month, client, cancellationToken);
         return Ok(points);
     }
 

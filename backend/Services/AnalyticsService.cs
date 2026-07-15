@@ -2,19 +2,28 @@ using System.Globalization;
 using PmcDashboard.Api.Dtos;
 using PmcDashboard.Api.Models;
 using PmcDashboard.Api.Repositories;
+using PmcDashboard.Api.Services.Caching;
 
 namespace PmcDashboard.Api.Services;
 
-public sealed class AnalyticsService(IDashboardRepository repository) : IAnalyticsService
+public sealed class AnalyticsService : IAnalyticsService
 {
+    private readonly IDashboardCache _cache;
+    private readonly ILogger<AnalyticsService> _logger;
     private static readonly CultureInfo ChileCulture = CultureInfo.GetCultureInfo("es-CL");
 
-    public Task<IReadOnlyList<DespachoRawRow>> GetRawAsync(
+    public AnalyticsService(IDashboardCache cache, ILogger<AnalyticsService> logger)
+    {
+        _cache = cache;
+        _logger = logger;
+    }
+
+    public async Task<IReadOnlyList<DespachoRawRow>> GetRawAsync(
         int year,
         int month,
         CancellationToken cancellationToken)
     {
-        return repository.GetDespachosAsync(year, month, cancellationToken);
+        return await _cache.GetDespachosAsync(year, month, cancellationToken);
     }
 
     public async Task<IReadOnlyList<string>> GetClientsAsync(
@@ -22,7 +31,7 @@ public sealed class AnalyticsService(IDashboardRepository repository) : IAnalyti
         int month,
         CancellationToken cancellationToken)
     {
-        var rows = await repository.GetDespachosAsync(year, month, cancellationToken);
+        var rows = await _cache.GetDespachosAsync(year, month, cancellationToken);
 
         return rows
             .Select(row => row.Sucursal)
@@ -38,7 +47,7 @@ public sealed class AnalyticsService(IDashboardRepository repository) : IAnalyti
         string? client,
         CancellationToken cancellationToken)
     {
-        var rows = await repository.GetDespachosAsync(year, month, cancellationToken);
+        var rows = await _cache.GetDespachosAsync(year, month, cancellationToken);
         var filteredRows = ApplyClientFilter(rows, client).ToList();
 
         return new SummaryDto(
@@ -61,7 +70,7 @@ public sealed class AnalyticsService(IDashboardRepository repository) : IAnalyti
         string? turno,
         CancellationToken cancellationToken)
     {
-        var rows = await repository.GetDespachosAsync(year, month, cancellationToken);
+        var rows = await _cache.GetDespachosAsync(year, month, cancellationToken);
 
         return rows
             .Where(row => IsSame(row.Sucursal, client))
@@ -92,7 +101,7 @@ public sealed class AnalyticsService(IDashboardRepository repository) : IAnalyti
         string? product,
         CancellationToken cancellationToken)
     {
-        var rows = await repository.GetDespachosAsync(year, month, cancellationToken);
+        var rows = await _cache.GetDespachosAsync(year, month, cancellationToken);
 
         return ApplyClientFilter(rows, client)
             .Where(row => string.IsNullOrWhiteSpace(product) || IsSame(row.Formato, product))
@@ -116,7 +125,7 @@ public sealed class AnalyticsService(IDashboardRepository repository) : IAnalyti
         string? client,
         CancellationToken cancellationToken)
     {
-        var rows = await repository.GetDespachosAsync(year, month, cancellationToken);
+        var rows = await _cache.GetDespachosAsync(year, month, cancellationToken);
 
         return ApplyClientFilter(rows, client)
             .Where(row => row.Fecha is not null)

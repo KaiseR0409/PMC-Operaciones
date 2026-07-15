@@ -1,6 +1,11 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.OpenApi.Models;
+using PmcDashboard.Api.Middleware;
 using PmcDashboard.Api.Repositories;
 using PmcDashboard.Api.Services;
+using PmcDashboard.Api.Services.Caching;
 
 LoadDotEnv();
 
@@ -37,22 +42,54 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
+
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IDashboardRepository, SqlDashboardRepository>();
+builder.Services.AddScoped<IDashboardCache, DashboardCache>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        var allowedOrigins = builder.Configuration
-            .GetSection("Cors:AllowedOrigins")
-            .Get<string[]>() ?? [];
-
         policy
-            .WithOrigins(allowedOrigins)
+            .AllowAnyOrigin()
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("AnalyticsLimiter", context =>
+    {
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+    });
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/problem+json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            type = "https://httpstatuses.com/429",
+            title = "Demasiadas solicitudes",
+            status = 429,
+            detail = "Ha excedido el limite de solicitudes. Intente nuevamente en un minuto."
+        }, cancellationToken);
+    };
 });
 
 var app = builder.Build();
@@ -68,39 +105,17 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+app.UseExceptionHandler();
+
 app.UseCors("Frontend");
 
-app.Use(async (context, next) =>
-{
-    if (!context.Request.Path.StartsWithSegments("/analytics"))
-    {
-        await next();
-        return;
-    }
+app.UseRateLimiter();
 
-    var configuredAnalyticsToken = app.Configuration["apiAnalytics:analyticsToken"];
-    if (string.IsNullOrWhiteSpace(configuredAnalyticsToken))
-    {
-        throw new InvalidOperationException(
-            "Missing apiAnalytics:analyticsToken. Set it in .env using apiAnalytics__analyticsToken.");
-    }
-
-    const string headerName = "X-Analytics-Token";
-
-    if (!context.Request.Headers.TryGetValue(headerName, out var providedAnalyticsToken) ||
-        !string.Equals(providedAnalyticsToken.ToString(), configuredAnalyticsToken, StringComparison.Ordinal))
-    {
-        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-        await context.Response.WriteAsync("Invalid or missing analytics token.");
-        return;
-    }
-
-    await next();
-});
+app.UseMiddleware<AnalyticsTokenMiddleware>();
 
 app.UseAuthorization();
 
-app.MapControllers();
+app.MapControllers().RequireRateLimiting("AnalyticsLimiter");
 
 app.Run();
 
