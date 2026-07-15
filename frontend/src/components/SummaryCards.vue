@@ -89,7 +89,8 @@ const formatVariation = (value) => {
             </h3>
 
             <div class="flex items-end gap-2">
-                <CountUp :end-val="summary.total_sacos || 0" :duration="2" :use-grouping="false"
+                <CountUp :end-val="summary.total_sacos || 0" :duration="2"
+                    :options="{ decimal: ',', separator: '.', decimalPlaces: 1 }"
                     class="text-4xl font-bold text-white" />
                 <span class="text-xl text-purple-300 mb-1">
                     T
@@ -152,7 +153,8 @@ const formatVariation = (value) => {
             </h3>
 
             <div class="flex items-end gap-2">
-                <CountUp :end-val="summary.total_maxisacos || 0" :duration="2" :use-grouping="false"
+                <CountUp :end-val="summary.total_maxisacos || 0" :duration="2"
+                    :options="{ decimal: ',', separator: '.', decimalPlaces: 1 }"
                     class="text-4xl font-bold text-white" />
 
                 <span class="text-xl text-purple-300 mb-1">

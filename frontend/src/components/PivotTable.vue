@@ -1,6 +1,14 @@
 <script setup>
 import { ref, computed, watch } from "vue"
 
+const formatDecimal = (value) => {
+  const num = Number(value) || 0
+  return num.toLocaleString("es-CL", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  })
+}
+
 const props = defineProps({
   rows: Array
 })
@@ -47,6 +55,7 @@ const paginatedRows = computed(() => {
           <th class="p-4 text-left">Turno</th>
           <th class="p-4 text-left">SACOS</th>
           <th class="p-4 text-left">MAXISACOS</th>
+          <th class="p-4 text-left">GRANEL</th>
         </tr>
       </thead>
 
@@ -60,8 +69,9 @@ const paginatedRows = computed(() => {
           <td class="p-4">{{ row.Fecha }}</td>
           <td class="p-4">{{ row["Dia Semana"] }}</td>
           <td class="p-4">{{ row.Turno }}</td>
-          <td class="p-4">{{ row.SACOS || 0 }}</td>
-          <td class="p-4">{{ row.MAXISACOS || 0 }}</td>
+          <td class="p-4">{{ formatDecimal(row.SACOS) }}</td>
+          <td class="p-4">{{ formatDecimal(row.MAXISACOS) }}</td>
+          <td class="p-4">{{ formatDecimal(row.GRANEL) }}</td>
         </tr>
       </tbody>
     </table>
