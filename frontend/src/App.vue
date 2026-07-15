@@ -1,4 +1,5 @@
 <script setup>
+import { Toaster } from "vue-sonner"
 import DashboardView from "./views/DashboardView.vue"
 </script>
 

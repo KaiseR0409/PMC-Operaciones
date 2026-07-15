@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 import { shallowRef } from "vue"
 
@@ -58,39 +58,37 @@ const debouncedFiltersChanged = debounce(handleFiltersChanged)
 
 const errors = ref([])
 
-function trackErrors(query, message) {
-  if (query.error.value) {
-    const err = query.error.value
-    if (err?.code !== "ERR_CANCELED" && err?.name !== "CanceledError") {
-      console.error(err)
-      errors.value = [message]
-      toast.error(message)
-    }
+function trackError(query, message) {
+  const err = query.error.value
+  if (err?.code !== "ERR_CANCELED" && err?.name !== "CanceledError") {
+    console.error(err)
+    errors.value = [message]
+    toast.error(message)
   }
 }
 
-const stopWatchSummary = summaryQuery.error.watch((err) => {
-  if (err) trackErrors(summaryQuery, "No se pudo actualizar el resumen general.")
+watch(() => summaryQuery.error.value, (err) => {
+  if (err) trackError(summaryQuery, "No se pudo actualizar el resumen general.")
 })
 
-const stopWatchClients = clientsQuery.error.watch((err) => {
-  if (err) trackErrors(clientsQuery, "No se pudo actualizar la lista de clientes.")
+watch(() => clientsQuery.error.value, (err) => {
+  if (err) trackError(clientsQuery, "No se pudo actualizar la lista de clientes.")
 })
 
-const stopWatchClientSummary = clientSummaryQuery.error.watch((err) => {
-  if (err) trackErrors(clientSummaryQuery, "No se pudo actualizar el resumen del cliente.")
+watch(() => clientSummaryQuery.error.value, (err) => {
+  if (err) trackError(clientSummaryQuery, "No se pudo actualizar el resumen del cliente.")
 })
 
-const stopWatchTable = tableQuery.error.watch((err) => {
-  if (err) trackErrors(tableQuery, "No se pudo actualizar la tabla.")
+watch(() => tableQuery.error.value, (err) => {
+  if (err) trackError(tableQuery, "No se pudo actualizar la tabla.")
 })
 
-const stopWatchLineChart = lineChartQuery.error.watch((err) => {
-  if (err) trackErrors(lineChartQuery, "No se pudo actualizar el grafico de tonelaje.")
+watch(() => lineChartQuery.error.value, (err) => {
+  if (err) trackError(lineChartQuery, "No se pudo actualizar el grafico de tonelaje.")
 })
 
-const stopWatchTruckChart = truckChartQuery.error.watch((err) => {
-  if (err) trackErrors(truckChartQuery, "No se pudo actualizar el grafico de camiones.")
+watch(() => truckChartQuery.error.value, (err) => {
+  if (err) trackError(truckChartQuery, "No se pudo actualizar el grafico de camiones.")
 })
 
 const tableQueryData = tableQuery.data
