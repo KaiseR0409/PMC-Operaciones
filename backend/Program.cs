@@ -60,8 +60,8 @@ builder.Services.AddCors(options =>
 
         policy
             .WithOrigins(origins)
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+            .WithHeaders("X-Analytics-Token")
+            .WithMethods("GET");
     });
 });
 
@@ -71,8 +71,13 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("AnalyticsLimiter", context =>
     {
+        var clientIp = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+            ?.Split(',').First().Trim()
+            ?? context.Connection.RemoteIpAddress?.ToString()
+            ?? "unknown";
+
         return RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            partitionKey: clientIp,
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 60,
@@ -109,6 +114,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
+
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 app.UseCors("Frontend");
 

@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace PmcDashboard.Api.Middleware;
 
 public sealed class AnalyticsTokenMiddleware
@@ -35,19 +38,50 @@ public sealed class AnalyticsTokenMiddleware
 
         const string headerName = "X-Analytics-Token";
 
-        if (!context.Request.Headers.TryGetValue(headerName, out var providedToken) ||
-            !string.Equals(providedToken.ToString(), configuredToken, StringComparison.Ordinal))
+        if (!context.Request.Headers.TryGetValue(headerName, out var providedToken))
         {
-            _logger.LogWarning(
-                "Unauthorized access attempt to {Path} from {IP}",
-                context.Request.Path,
-                context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+            LogUnauthorized(context);
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("Invalid or missing analytics token.");
+            return;
+        }
 
+        if (!TimingSafeEquals(providedToken.ToString(), configuredToken))
+        {
+            LogUnauthorized(context);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsync("Invalid or missing analytics token.");
             return;
         }
 
         await _next(context);
+    }
+
+    private void LogUnauthorized(HttpContext context)
+    {
+        _logger.LogWarning(
+            "Unauthorized access attempt to {Path} from {IP}",
+            context.Request.Path,
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+    }
+
+    private static bool TimingSafeEquals(string provided, string configured)
+    {
+        var providedBytes = Encoding.UTF8.GetBytes(provided);
+        var configuredBytes = Encoding.UTF8.GetBytes(configured);
+
+        if (providedBytes.Length != configuredBytes.Length)
+        {
+            CryptographicOperations.ZeroMemory(providedBytes);
+            CryptographicOperations.ZeroMemory(configuredBytes);
+            return false;
+        }
+
+        var result = CryptographicOperations.FixedTimeEquals(providedBytes, configuredBytes);
+
+        CryptographicOperations.ZeroMemory(providedBytes);
+        CryptographicOperations.ZeroMemory(configuredBytes);
+
+        return result;
     }
 }
