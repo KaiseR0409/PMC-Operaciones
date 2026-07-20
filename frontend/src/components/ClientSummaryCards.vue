@@ -69,7 +69,7 @@ defineProps({
 
             <div class="flex items-end gap-2">
                 <CountUp :end-val="summary.total_sacos || 0" :duration="2"
-                    :options="{ decimal: ',', separator: '.', decimalPlaces: 1 }"
+                    :options="{ separator: '.', decimalPlaces: 0 }"
                     class="text-4xl font-bold text-white" />
 
                 <span class="text-lg text-pink-300 mb-1">
@@ -122,7 +122,7 @@ defineProps({
 
             <div class="flex items-end gap-2">
                 <CountUp :end-val="summary.total_maxisacos || 0" :duration="2"
-                    :options="{ decimal: ',', separator: '.', decimalPlaces: 1 }"
+                    :options="{ separator: '.', decimalPlaces: 0 }"
                     class="text-4xl font-bold text-white" />
 
                 <span class="text-lg text-sky-300 mb-1">
@@ -175,7 +175,7 @@ defineProps({
 
             <div class="flex items-end gap-2">
                 <CountUp :end-val="summary.total_granel || 0" :duration="2"
-                    :options="{ decimal: ',', separator: '.', decimalPlaces: 1 }"
+                    :options="{ separator: '.', decimalPlaces: 0 }"
                     class="text-4xl font-bold text-white" />
 
                 <span class="text-lg text-emerald-300 mb-1">

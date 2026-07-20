@@ -2,11 +2,8 @@
 import { ref, computed, watch } from "vue"
 
 const formatDecimal = (value) => {
-  const num = Number(value) || 0
-  return num.toLocaleString("es-CL", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1
-  })
+  const num = Math.round(Number(value) || 0)
+  return num.toLocaleString("es-CL")
 }
 
 const props = defineProps({

@@ -61,7 +61,7 @@ const errors = ref([])
 function trackError(query, message) {
   const err = query.error.value
   if (err?.code !== "ERR_CANCELED" && err?.name !== "CanceledError") {
-    console.error(err)
+    if (import.meta.env.DEV) console.error(err)
     errors.value = [message]
     toast.error(message)
   }
@@ -250,6 +250,7 @@ watch(() => truckChartQuery.data.value, (val) => {
           <option value="">Todos</option>
           <option value="SACOS">SACOS</option>
           <option value="MAXISACOS">MAXISACOS</option>
+          <option value="GRANEL">GRANEL</option>
         </select>
       </div>
 

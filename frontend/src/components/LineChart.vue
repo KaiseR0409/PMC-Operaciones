@@ -23,80 +23,50 @@ const weekSeparatorPlugin = {
     id: "weekSeparator",
 
     afterDraw(chart) {
-        const weeks =
-            props.chartData?.weeks
+        const weeks = props.chartData?.weeks
+        const showWeeks = props.chartData?.showWeeks
 
-        const showWeeks =
-            props.chartData?.showWeeks
-
-        if (!showWeeks) {
+        if (!showWeeks || !weeks || weeks.length === 0) {
             return
         }
 
-        if (!weeks) {
-            return
+        const { ctx, chartArea, scales } = chart
+        if (!chartArea) return
+
+        const groups = []
+        let currentWeek = weeks[0]
+        let startIdx = 0
+
+        for (let i = 1; i < weeks.length; i++) {
+            if (weeks[i] !== currentWeek) {
+                groups.push({ week: currentWeek, start: startIdx, end: i - 1 })
+                currentWeek = weeks[i]
+                startIdx = i
+            }
         }
-
-        const uniqueWeeks = [
-            ...new Set(weeks)
-        ]
-
-        if (uniqueWeeks.length <= 1) {
-            return
-        }
-
-        const {
-            ctx,
-            chartArea,
-            scales
-        } = chart
+        groups.push({ week: currentWeek, start: startIdx, end: weeks.length - 1 })
 
         ctx.save()
 
-        let previousWeek = weeks[0]
+        for (let i = 0; i < groups.length; i++) {
+            const g = groups[i]
+            const centerX = scales.x.getPixelForValue(g.start + (g.end - g.start) / 2)
 
-        for (
-            let i = 1;
-            i < weeks.length;
-            i++
-        ) {
-            if (
-                weeks[i] !== previousWeek
-            ) {
-                const x =
-                    scales.x.getPixelForValue(i)
+            ctx.fillStyle = "#c084fc"
+            ctx.font = "bold 12px sans-serif"
+            ctx.textAlign = "center"
+            ctx.fillText(`S${g.week}`, centerX, chartArea.top - 8)
 
-                ctx.strokeStyle =
-                    "rgba(255,255,255,0.2)"
-
+            if (i > 0) {
+                const lineX = scales.x.getPixelForValue(g.start)
+                ctx.strokeStyle = "rgba(255,255,255,0.15)"
+                ctx.lineWidth = 1
+                ctx.setLineDash([4, 4])
                 ctx.beginPath()
-
-                ctx.moveTo(
-                    x,
-                    chartArea.top
-                )
-
-                ctx.lineTo(
-                    x,
-                    chartArea.bottom
-                )
-
+                ctx.moveTo(lineX, chartArea.top)
+                ctx.lineTo(lineX, chartArea.bottom)
                 ctx.stroke()
-
-                ctx.fillStyle =
-                    "#c084fc"
-
-                ctx.font =
-                    "11px sans-serif"
-
-                ctx.fillText(
-                    `S${weeks[i]}`,
-                    x + 5,
-                    chartArea.top - 25
-                )
-
-                previousWeek =
-                    weeks[i]
+                ctx.setLineDash([])
             }
         }
 
@@ -108,11 +78,17 @@ const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
 
+    layout: {
+        padding: {
+            top: 20
+        }
+    },
+
     plugins: {
         tooltip: {
             callbacks: {
                 label: (context) => {
-                    const value = Math.round(context.parsed.y)
+                    const value = Math.round(context.parsed.y).toLocaleString("es-CL")
 
                     return `${context.dataset.label}: ${value}`
                 }
