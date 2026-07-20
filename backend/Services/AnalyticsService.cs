@@ -50,6 +50,10 @@ public sealed class AnalyticsService : IAnalyticsService
         var rows = await _cache.GetDespachosAsync(year, month, cancellationToken);
         var filteredRows = ApplyClientFilter(rows, client).ToList();
 
+        var (prevYear, prevMonth) = month == 1 ? (year - 1, 12) : (year, month - 1);
+        var prevRows = await _cache.GetDespachosAsync(prevYear, prevMonth, cancellationToken);
+        var prevFiltered = ApplyClientFilter(prevRows, client).ToList();
+
         return new SummaryDto(
             TotalSacos: SumByFormat(filteredRows, "Sacos"),
             TotalMaxisacos: SumByFormat(filteredRows, "Maxisacos"),
@@ -60,7 +64,14 @@ public sealed class AnalyticsService : IAnalyticsService
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Count(),
             RegistrosTotales: filteredRows.Count,
-            Variations: new SummaryVariationsDto(0, 0, 0, 0, 0));
+            Variations: new SummaryVariationsDto(
+                Sacos: CalcVariation(SumByFormat(filteredRows, "Sacos"), SumByFormat(prevFiltered, "Sacos")),
+                Maxisacos: CalcVariation(SumByFormat(filteredRows, "Maxisacos"), SumByFormat(prevFiltered, "Maxisacos")),
+                Granel: CalcVariation(SumByFormat(filteredRows, "Granel"), SumByFormat(prevFiltered, "Granel")),
+                Clientes: CalcVariation(
+                    filteredRows.Select(r => r.Sucursal).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                    prevFiltered.Select(r => r.Sucursal).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(StringComparer.OrdinalIgnoreCase).Count()),
+                Registros: CalcVariation(filteredRows.Count, prevFiltered.Count)));
     }
 
     public async Task<IReadOnlyList<ClientTableRowDto>> GetClientTableAsync(
@@ -109,7 +120,7 @@ public sealed class AnalyticsService : IAnalyticsService
             .GroupBy(row => new
             {
                 Fecha = row.Fecha!.Value.Date,
-                Semana = row.SemanaAno
+                Semana = row.SemanaMes
             })
             .OrderBy(group => group.Key.Fecha)
             .Select(group => new LineChartPointDto(
@@ -132,7 +143,7 @@ public sealed class AnalyticsService : IAnalyticsService
             .GroupBy(row => new
             {
                 Fecha = row.Fecha!.Value.Date,
-                Semana = row.SemanaAno
+                Semana = row.SemanaMes
             })
             .OrderBy(group => group.Key.Fecha)
             .Select(group => new TruckChartPointDto(
@@ -161,5 +172,13 @@ public sealed class AnalyticsService : IAnalyticsService
     private static bool IsSame(string value, string expected)
     {
         return string.Equals(value.Trim(), expected.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static decimal CalcVariation(decimal current, decimal previous)
+    {
+        if (previous == 0)
+            return current > 0 ? 100 : 0;
+
+        return Math.Round(((current - previous) / previous) * 100, 1);
     }
 }
